@@ -2414,7 +2414,7 @@ void XYZV3::printFileRun()
 	{
 	case ACT_PF_START:
 		// if gcode convert to 3w file
-		if(isGcodeFile(m_filePath))
+		if(0)   //isGcodeFile(m_filePath))
 		{
 			char tpath[MAX_PATH] = "";
 			char tfile[MAX_PATH] = "";
@@ -2704,7 +2704,7 @@ bool XYZV3::sendFileInit(const char *path, bool isPrint)
 						else // V3 protocol
 						{
 							// now we have a buffer, go ahead and start to print it
-							pDat.blockSize = (m_status.isValid) ? m_status.oPacketSize : 8192;
+							pDat.blockSize = /*(m_status.isValid) ? m_status.oPacketSize :*/ 10236;
 							pDat.blockCount = (len + pDat.blockSize - 1) / pDat.blockSize; // round up
 							pDat.lastBlockSize = len % pDat.blockSize;
 							pDat.curBlock = 0;
@@ -2713,20 +2713,28 @@ bool XYZV3::sendFileInit(const char *path, bool isPrint)
 
 							if(pDat.blockBuf)
 							{
+								serialSendMessage("XYZ_@3D:4");
+								waitForResponse("OFFLINE_OK");
+								if(waitForResponse("OFFLINE_OK"))
+								{
 								//if(serialCanSendMessage())
 								//{
-									if(isPrint)
-										serialSendMessage("XYZv3/upload=temp.gcode,%d%s\n", len, (saveToSD) ? ",SaveToSD" : "");
-									else
-										serialSendMessage("XYZv3/firmware=temp.bin,%d%s\n", len, (downgrade) ? ",Downgrade" : "");
+									//if(isPrint)
+										//serialSendMessage("XYZv3/upload=temp.gcode,%d%s\n", len, (saveToSD) ? ",SaveToSD" : "");
+										serialSendMessage("M1:temp.gcode,%d,1.3.49,EE1_OK,EE2_OK", len);
+									//else
+									//	serialSendMessage("XYZv3/firmware=temp.bin,%d%s\n", len, (downgrade) ? ",Downgrade" : "");
 								//}
 								//else if(m_timeout.isTimeout())
 								//	setSubState(ACT_FAILURE);
 
-								if(waitForConfigOK())
+								if(waitForResponse("OFFLINE_OK"))
 								{
 									pDat.isPrintActive = true;
 									success = true;
+								}
+								else
+									debugPrint(DBG_WARN, "XYZV3::sendFileInit failed to send data");
 								}
 								else
 									debugPrint(DBG_WARN, "XYZV3::sendFileInit failed to send data");
@@ -2801,7 +2809,7 @@ bool XYZV3::sendFileProcess()
 		{
 			int blockLen = (i+1 == pDat.blockCount) ? pDat.lastBlockSize : pDat.blockSize;
 			char *tBuf = pDat.blockBuf;
-
+			/*
 			// block count
 			t = swap32bit(i);
 			memcpy(tBuf, &t, 4);
@@ -2811,19 +2819,21 @@ bool XYZV3::sendFileProcess()
 			t = swap32bit(blockLen);
 			memcpy(tBuf, &t, 4);
 			tBuf += 4;
-
+			*/
 			// data block
 			memcpy(tBuf, pDat.data + i*pDat.blockSize, blockLen);
 			tBuf += blockLen;
-
+			unsigned int checksum=0;
+			for (int o =0; o<blockLen; o++) checksum+=tBuf[o];
+			
 			// end of data
-			t = swap32bit(0);
+			t = swap32bit(checksum);
 			memcpy(tBuf, &t, 4);
 			tBuf += 4;
 
 			// write out in one shot
-			m_stream->write(pDat.blockBuf, blockLen + 12);
-			success = waitForConfigOK();
+			m_stream->write(pDat.blockBuf, blockLen + 4);
+			success = waitForResponse("CheckSumOK");//waitForConfigOK();
 			if(!success) // bail on error
 			{
 				debugPrint(DBG_WARN, "XYZV3::sendFileProcess failed on write");
@@ -5027,8 +5037,8 @@ void XYZV3::V2S_parseStatusSubstring(const char *str, bool doPrint)
 			m_status.tExtruder2ActualTemp_C = atoi(s);
 			m_status.tExtruderCount = 2;
 		}
-		else
-			m_status.tExtruder2ActualTemp_C = 0;
+		//else
+			//m_status.tExtruder2ActualTemp_C = 0;
 
 		// u
 
@@ -5081,6 +5091,7 @@ void XYZV3::V2S_parseStatusSubstring(const char *str, bool doPrint)
 		}
 
 		s = findValue(str, "EE2:");
+		if(s) m_status.tExtruderCount = 2;
 		// ignore output for now
 
 		// x-z
@@ -5197,7 +5208,7 @@ void XYZV3::V2S_SendFileHelper(const char *buf, int len, v2sFileMode mode)
 				// wat for M1_OK, or possibly M1_FAIL on 1.1 Plus
 				//****FixMe, may not even be returned on 1.0 machine
 				if(mode == V2S_FILE || mode == V2S_10_FW)
-					ret = waitForResponse("M1_OK"); // wait 5 seconds
+					ret = waitForResponse("OFFLINE_OK"); // wait 5 seconds
 				else
 					ret = waitForResponse("M2_OK"); // wait 5 seconds
 

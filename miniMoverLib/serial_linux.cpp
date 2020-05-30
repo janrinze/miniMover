@@ -112,9 +112,21 @@ int baudFlag(int BaudRate)
         case 9600:    return B9600; break;
         case 19200:   return B19200; break;
         case 38400:   return B38400; break;
-        case 57600:   return B57600; break;
-        case 115200:  return B115200; break;
-        case 230400:  return B230400; break;
+	case 57600  : return B57600   ;
+	case 115200 : return B115200  ;
+	case 230400 : return B230400  ;
+	case 460800 : return B460800  ;
+	case 500000 : return B500000  ;
+	case 576000 : return B576000  ;
+	case 921600 : return B921600  ;
+	case 1000000: return B1000000 ;
+	case 1152000: return B1152000 ;
+	case 1500000: return B1500000 ;
+	case 2000000: return B2000000 ;
+	case 2500000: return B2500000 ;
+	case 3000000: return B3000000 ;
+	case 3500000: return B3500000 ;
+	case 4000000: return B4000000 ;
         default : return B0; break;
     }
 }
@@ -195,7 +207,7 @@ bool Serial::openStream(const char *deviceName, int baudRate)
 
 			// Timeouts configuration
 			// wait time in 10th of a second
-		    options.c_cc[VTIME] = 1; 
+		    options.c_cc[VTIME] = 10; 
 
 			// minimum number of characters to read, 0 is no minimum
 		    options.c_cc[VMIN]  = 0; 
@@ -346,6 +358,7 @@ int Serial::write(const char *buf, int len)
 		if(isOpen())
 		{
 			int tLen = ::write(m_handle, buf, len);
+			::fsync(m_handle);
 			if(tLen > 0)
 			{
 				// success

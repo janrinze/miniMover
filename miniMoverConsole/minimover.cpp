@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <time.h>
+#include <iostream>
 
 #include "timer.h"
 #include "stream.h"
@@ -164,7 +165,7 @@ bool checkCon()
 			}
 			else // serial port
 			{
-				if(serial.openStream(tDevice, 115200))
+				if(serial.openStream(tDevice, 4000000))
 				{
 					xyz.setStream(&serial);
 
@@ -262,7 +263,7 @@ bool printStatus()
 			if(st->sSDCard)
 				printf("Has sd card\n");
 
-			if(st->tExtruderCount > 1 && st->tExtruder2ActualTemp_C > 0)
+			if((st->tExtruderCount > 1) && (st->tExtruder2ActualTemp_C > 0))
 				printf("Extruder temp: %d C, %d C, target temp: %d C\n", st->tExtruder1ActualTemp_C, st->tExtruder2ActualTemp_C, st->tExtruderTargetTemp_C);
 			else
 				printf("Extruder temp: %d C, target temp: %d C\n", st->tExtruder1ActualTemp_C, st->tExtruderTargetTemp_C);
@@ -384,7 +385,7 @@ bool monitorPrintJob()
 			if(st->dPrintPercentComplete != 0 || st->dPrintElapsedTime_m != 0 || st->dPrintTimeLeft_m != 0)
 				printf(" Job: %d %% %d m %d m", st->dPrintPercentComplete, st->dPrintElapsedTime_m, st->dPrintTimeLeft_m);
 
-			if(st->eErrorStatus != 0)
+			if(st->eErrorStatus != 0x1b)
 				printf(" Error: (0x%08x)%s", st->eErrorStatus, st->eErrorStatusStr);
 
 			printf("\n");
@@ -414,7 +415,7 @@ bool handlePrintFile(const char *path)
 			// notify the user that we are still uploading
 			printCount++;
 			if(printCount % 4 == 0)
-				printf(".");
+				std::cout <<"." << std::flush;
 		}
 		printf("\n");
 
@@ -968,8 +969,8 @@ int main(int argc, char **argv)
 
 #if defined(_DEBUG) |  defined(DUMP_STATUS)
 	printf("run took %0.4f seconds\n", tm.stopTimer());
-	printf("\nhit any key to continue.\n");
-	getch();
+	//printf("\nhit any key to continue.\n");
+	//getch();
 #endif
 
 	return 0;
